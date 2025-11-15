@@ -1,0 +1,154 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <!-- Webpage title -->
+    <title>Securo - {% block title %}{% endblock title %}</title>
+
+    <!-- Bootstrap CSS -->
+    {% load django_bootstrap5 %}
+    {% bootstrap_css %}
+    {% bootstrap_javascript %}
+
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'main.css' %}">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.png' %}">
+</head>
+
+<body>
+    <!-- navbar start (for small screens) -->
+    <nav class="navbar navbar-expand-lg bg-dark border-bottom border-body d-lg-none" data-bs-theme="dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'passmanager:vault' %}">
+                <img src="{% static 'images/logo.png' %}" alt="logo" width="150">
+            </a>
+
+            <button class="navbar-toggler navbar-dark" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav mr-auto">
+                    {% if user.is_authenticated %}
+                        {% if request.user.is_superuser == 1 %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'admin:index' %}">Admin</a>
+                            </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/vault/' %}active{% endif %}" href="{% url 'passmanager:vault' %}">Vault</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/password_generator/' %}active{% endif %}" href="{% url 'passmanager:password_generator' %}">Generator</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/import_csv/' %}active{% endif %}" href="{% url 'passmanager:import_csv' %}">Import Data</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/password_checkup/' %}active{% endif %}" href="{% url 'passmanager:password_checkup' %}">Checkup</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/new_item/' %}active{% endif %}" href="{% url 'passmanager:new_item' %}">New Item</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/user/account/' %}active{% endif %}" href="{% url 'users:account' %}">Account</a>
+                        </li>
+                        <li class="nav-item">
+                            <form action="{% url 'users:logout' %}" method="POST" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="nav-link me-5">Logout</button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/user/login/' %}active{% endif %}" href="{% url 'passmanager:vault' %}">LOGIN</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/user/register/' %}active{% endif %}" href="{% url 'users:register' %}">SIGN UP</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <!-- navbar end -->
+
+    <!-- sidebar start -->
+    <nav class="sidebar d-none d-lg-flex flex-column flex-shrink-0 p-3 bg-dark">
+        <a class="d-flex mx-auto mb-3 mb-md-0 text-light text-decoration-none" href="{% url 'passmanager:vault' %}">
+            <img src="{% static 'images/logo.png' %}" alt="logo" width="170">
+        </a>
+        <hr class="border-light">
+        <ul class="nav nav-pills flex-column mb-auto">
+            {% if user.is_authenticated %}
+                <li class="nav-item" data-toggle="tooltip" data-placement="bottom" title="Vault">
+                    <a class="nav-link text-light {% if request.path == '/' %}active{% endif %}" href="{% url 'passmanager:vault' %}"><i class="bi bi-safe"></i> Vault</a>
+                </li>
+                <li class="nav-item" data-toggle="tooltip" data-placement="bottom" title="Password Generator">
+                    <a class="nav-link text-light {% if request.path == '/password_generator/' %}active{% endif %}" href="{% url 'passmanager:password_generator' %}"><i class="bi bi-key"></i> Generator</a>
+                </li>
+                <li class="nav-item" data-toggle="tooltip" data-placement="bottom" title="Import Data">
+                    <a class="nav-link text-light {% if request.path == '/import_csv/' %}active{% endif %}" href="{% url 'passmanager:import_csv' %}"><i class="bi bi-upload"></i> Import Data</a>
+                </li>
+                <li class="nav-item" data-toggle="tooltip" data-placement="bottom" title="Password Checkup">
+                    <a class="nav-link text-light {% if request.path == '/password_checkup/' %}active{% endif %}" href="{% url 'passmanager:password_checkup' %}"><i class="bi bi-shield-check"></i> Checkup</a>
+                </li>
+            {% else %}
+                <li class="nav-item">
+                    <a class="nav-link text-light {% if request.path == '/user/login/' %}active{% endif %}" href="{% url 'passmanager:vault' %}"><i class="bi bi-door-open"></i> LOGIN</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-light {% if request.path == '/user/register/' %}active{% endif %}" href="{% url 'users:register' %}"><i class="bi bi-person-plus"></i> SIGN UP</a>
+                </li>
+            {% endif %}
+        </ul>
+        <div class="dropdown">
+            <a href="#" class="d-flex align-items-center text-light text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                <strong><i class="bi bi-person-circle"></i> {{ request.user.username }}</strong>
+            </a>
+            <hr class="border-light">
+            <ul class="dropdown-menu text-small" aria-labelledby="dropdownUser1">
+                {% if user.is_authenticated %}
+                    {% if request.user.is_superuser == 1 %}
+                        <li><a class="dropdown-item" href="{% url 'admin:index' %}">Admin</a></li>
+                    {% endif %}
+                    <li><a class="dropdown-item" href="{% url 'passmanager:new_item' %}">New Item</a></li>
+                    <li><a class="dropdown-item" href="{% url 'users:account' %}">Account</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form action="{% url 'users:logout' %}" method="POST" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item me-5">Logout</button>
+                        </form>
+                    </li>
+                {% endif %}
+            </ul>
+            <div class="text-light small mt-2">
+                <strong>&copy; <script>document.write(new Date().getFullYear());</script> Thushar Raj</strong>
+            </div>
+        </div>
+    </nav>
+    <!-- sidebar end -->
+
+    <!-- main start -->
+    <main role="main" class="container">
+        <div class="row justify-content-start mt-lg-3">
+            <div class="col-md-8 offset-md-3 mt-3 mb-1">
+                <!-- custom content start -->
+                {% block content %}{% endblock %}
+                <!-- custom content end -->
+            </div>
+        </div>
+    </main>
+    <!-- main end -->
+
+</body>
+
+</html>

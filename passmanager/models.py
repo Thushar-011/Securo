@@ -1,0 +1,102 @@
+import base64
+import os
+
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from django.conf import settings
+from django.db import models
+
+from .encryption import derive_key_from_master_password
+
+
+class Item(models.Model):
+    name = models.CharField(max_length=50)
+    username = models.TextField(blank=True)
+    password = models.TextField(blank=True)
+    url = models.URLField(max_length=50, blank=True)
+    notes = models.TextField(blank=True)
+    group = models.CharField(max_length=50, default="General")
+    date_added = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="items")
+
+    @staticmethod
+    def encrypt_field(key: bytes, value: str) -> str:
+        """
+        Encrypt value using AES GCM with a 256-bit key.
+        """
+        key_bytes = base64.urlsafe_b64decode(key)
+        nonce = os.urandom(12)  # 12-bytes nonce for GCM
+        cipher = Cipher(algorithms.AES(key_bytes), modes.GCM(nonce), backend=default_backend())
+        encryptor = cipher.encryptor()
+        ciphertext = encryptor.update(value.encode()) + encryptor.finalize()
+        tag = encryptor.tag  # 16 bytes
+        combined = nonce + ciphertext + tag
+        return base64.urlsafe_b64encode(combined).decode()
+
+    @staticmethod
+    def decrypt_field(key: bytes, value: str) -> str:
+        """
+        Decrypt AES GCM encrypted data using the given key.
+        """
+        key_bytes = base64.urlsafe_b64decode(key)
+        combined = base64.urlsafe_b64decode(value.encode())
+        nonce = combined[:12]
+        ciphertext = combined[12:-16]
+        tag = combined[-16:]
+        cipher = Cipher(algorithms.AES(key_bytes), modes.GCM(nonce, tag), backend=default_backend())
+        decryptor = cipher.decryptor()
+        decrypted = decryptor.update(ciphertext) + decryptor.finalize()
+        return decrypted.decode()
+
+    def get_key(self) -> bytes:
+        """
+        Derive the encryption key using owner's master password,
+        and their encryption salt.
+        """
+        salt = base64.urlsafe_b64decode(self.owner.encryption_salt)
+        return derive_key_from_master_password(self.owner.password, salt)
+
+    def encrypt_sensitive_fields(self, key: bytes = None) -> None:
+        """
+        Manually encrypt sensitive fields.
+        
+        Args:
+            key: Optional encryption key (bytes). If not provided, derives from owner's password.
+                 For production use, pass the session-derived key.
+        """
+        if key is None:
+            key = self.get_key()
+        self.username = self.encrypt_field(key, self.username)
+        self.password = self.encrypt_field(key, self.password)
+        self.notes = self.encrypt_field(key, self.notes)
+
+        del key  # Securely forget the encryption key
+
+    def decrypt_sensitive_fields(self, key: bytes = None) -> None:
+        """
+        Decrypt sensitive fields for display.
+        
+        Args:
+            key: Optional encryption key (bytes). If not provided, derives from owner's password.
+                 For production use, pass the session-derived key.
+        """
+        if key is None:
+            key = self.get_key()
+        self.username = self.decrypt_field(key, self.username)
+        self.password = self.decrypt_field(key, self.password)
+        self.notes = self.decrypt_field(key, self.notes)
+
+        del key  # Securely forget the encryption key
+
+    def save(self, *args, **kwargs):
+        """
+        Title-case name and group before saving.
+        """
+        self.name = self.name.title()
+        if self.group:
+            self.group = self.group.title()
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.name

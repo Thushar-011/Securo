@@ -1,0 +1,58 @@
+{% extends "passmanager/base.html" %}
+{% load django_bootstrap5 %}
+{% load url_filters %}
+
+{% block title %}My Vault{% endblock title %}
+
+{% block content %}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-success text-center" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if items %}
+        <form method="GET" class="mb-4">
+            <div class="d-flex flex-column flex-md-row gap-2">
+                <div class="d-flex w-100 w-md-50">
+                    <label class="input-group-text" for="group">Group</label>
+                    <!-- group filter dropdown -->
+                    <select class="form-select ms-1" name="group" id="group" onchange="this.form.submit()">
+                        <option value="">All Groups</option>
+                        {% for group in groups %}
+                            <option value="{{ group }}" {% if selected_group == group %}selected{% endif %}>{{ group }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- search items field -->
+                <div class="d-flex w-100 w-md-50">
+                    <input class="form-control form-control-sm" type="search" name="search_query" placeholder="Search items" value="{{ search_query|default:'' }}">
+                    <button class="btn btn-sm btn-outline-secondary ms-2" type="submit">Search</button>
+                </div>
+            </div>
+        </form>
+    {% endif %}
+
+    {% for item in items %}
+        <a href="{% url 'passmanager:edit_item' item.id %}" class="text-decoration-none">
+            <article class="media border-dark rounded shadow item-section">
+                <div class="favicon-wrapper me-md-4 me-1">
+                    <!-- favicon fetched via google's favicon service: https://www.google.com/s2/favicons -->
+                    <img src="https://www.google.com/s2/favicons?sz=64&domain={{ item.url|urlsplit:'netloc' }}" alt="favicon" width="32" height="32">
+                </div>
+                <div class="media-body">
+                    <div class="item-metadata mb-0">
+                        <small class="text-muted">{{ item.date_added }}</small>
+                    </div>
+                    <h2 class="mb-0 item-name">{{ item.name }}</h2>
+                </div>
+            </article>
+        </a>
+    {% empty %}
+        <div class="container text-center mt-3">
+            <h5>There are no items in the list.</h5>
+        </div>
+    {% endfor %}
+{% endblock content %}
